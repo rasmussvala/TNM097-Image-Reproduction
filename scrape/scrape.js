@@ -12,15 +12,14 @@ async function scrape() {
   });
 
   // Create a storage directory (if it doesn't exist)
-  const downloadDir = "../pokemon-images";
+  const downloadDir = "../pokemon-images/gen8";
   fs.mkdirSync(downloadDir, { recursive: true });
 
-  const totalPokemons = 151;
+  const totalPokemons = 96;
 
   for (let i = 1; i <= totalPokemons; i++) {
     const xPathString =
-      "/html/body/main/div[3]/div[" + i.toString() + "]/span[1]/a/picture/img";
-
+      "/html/body/main/div[10]/div[" + i.toString() + "]/span[1]/a/picture/img";
     // Evaluate XPath expression in browser context
     const imageUrl = await page.evaluate((xPathString) => {
       const imageElement = document.evaluate(
