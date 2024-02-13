@@ -12,7 +12,7 @@ async function scrape() {
   });
 
   // Create a storage directory (if it doesn't exist)
-  const downloadDir = "./pokemon-images";
+  const downloadDir = "../pokemon-images";
   fs.mkdirSync(downloadDir, { recursive: true });
 
   const totalPokemons = 151;
