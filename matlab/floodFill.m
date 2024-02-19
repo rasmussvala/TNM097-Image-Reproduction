@@ -1,3 +1,14 @@
+function final = floodFill(img, startRow, startCol, fillColor)
+% Implements a 4-connected flood fill algorithm
+
+[numRows, numCols, ~] = size(img);
+final = img; % Create a copy to modify
+
+% Check if starting pixel is close to white
+threshold = 245;
+if ~all(img(startRow, startCol, :) >= threshold)
+    return; % No fill needed if not close to white
+end
 
 stack = [startRow startCol];
 
