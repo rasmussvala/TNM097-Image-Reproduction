@@ -5,6 +5,15 @@ BAR = waitbar(0,'Starting image reproduction...', 'Name', 'Image Reproduction');
 % Input image, the image which will be reproduced
 inputImage = imread(imagePath);
 
+% Check if the input image is too small or too large
+if size(inputImage, 1) < 50 || size(inputImage, 2) < 50
+    warning('Input image is too small. Resizing to a larger size.');
+    inputImage = imresize(inputImage, 1.5); % Adjust the desired larger size
+elseif size(inputImage, 1) > 500 || size(inputImage, 2) > 500
+    warning('Input image is too large. Resizing to a smaller size.');
+    inputImage = imresize(inputImage, 0.5); % Adjust the desired smaller size
+end
+
 % The data containing all of the smaller images
 folder = '../pokemon-images/all-pokemons';
 fileList = dir(fullfile(folder, '*.jpg'));
