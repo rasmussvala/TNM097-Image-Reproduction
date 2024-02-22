@@ -2,30 +2,31 @@ function outputImage = create_poke_image(imagePath)
 
 BAR = waitbar(0,'Starting image reproduction...', 'Name', 'Image Reproduction');
 
-% Input image, the image which will be reproduced
+% Image which will be reproduced
 inputImage = imread(imagePath);
 
-% Check if the input image is too small or too large
+% Check if the input image is too small or too large and resize 
 if size(inputImage, 1) < 50 || size(inputImage, 2) < 50
     warning('Input image is too small. Resizing to a larger size.');
-    inputImage = imresize(inputImage, 1.5); % Adjust the desired larger size
+    inputImage = imresize(inputImage, 1.5); % Makes the image 1.5 times larger
 elseif size(inputImage, 1) > 500 || size(inputImage, 2) > 500
     warning('Input image is too large. Resizing to a smaller size.');
-    inputImage = imresize(inputImage, 0.5); % Adjust the desired smaller size
+    inputImage = imresize(inputImage, 0.5); % Makes the image 0.5 times larger
 end
 
-% The data containing all of the smaller images
+% Creates an array with strings of full file specification
 folder = '../pokemon-images/all-pokemons';
 fileList = dir(fullfile(folder, '*.jpg'));
 
-% The images are resized to blocksize x blocksize
+% The images (pokemons) are resized to blocksize x blocksize
 images = cell(1, numel(fileList));
 resized_images = cell(1, numel(fileList));
 blocksize = 32;
 
-% Uses showRGB to display all the average colors from the data
-dataBase_avgColors = zeros(numel(fileList), 3);  % Matrix to store average colors (R, G, B)
+% Matrix to store average colors of pokemons (R, G, B)
+dataBase_avgColors = zeros(numel(fileList), 3);  
 
+% Loop through database, resize and calculate avg color 
 for i = 1:numel(fileList)
     filename = fullfile(folder, fileList(i).name);
     images{i} = im2double(imread(filename));
@@ -37,23 +38,19 @@ for i = 1:numel(fileList)
     dataBase_avgColors(i, 3) = mean(mean(resized_images{i}(:,:,3)));  % Blue channel
 end
 
-% Convert the input image to a matrix of RGB values
+% Convert the input image to a list of RGB values
 inputImageSize = size(inputImage);
-inputImageMatrix = im2double(reshape(inputImage, [], 3));
+inputImageMatrix = im2double(reshape(inputImage, [], 3)); % Rearrange the image to a list of RGB values 
 
 % Perform k-means clustering to find the most common colors with increased iterations
 num_colors = 10;
-[idx, inputImage_commonColors] = kmeans(inputImageMatrix, num_colors);
+[~, inputImage_commonColors] = kmeans(inputImageMatrix, num_colors);
 
 % Convert avg colors to LAB
 dataBase_avgColors_LAB = rgb2lab(dataBase_avgColors);
 
 % Convert common colors to LAB
 inputImage_commonColors_LAB = rgb2lab(inputImage_commonColors);
-
-% Initialize matrices to store the mean and max DeltaE values
-meanDeltaE_matrix = zeros(inputImageSize(1), inputImageSize(2));
-maxDeltaE_matrix = zeros(inputImageSize(1), inputImageSize(2));
 
 % Calc sizes for output image
 outputImageSize = inputImageSize * blocksize;
