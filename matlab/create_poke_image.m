@@ -94,5 +94,6 @@ for row = 1:blocksize:rows
         waitbar(row / outputImageSize(1), BAR, sprintf('Reproduction: %.1f%%', row / outputImageSize(1) * 100));
     end
 end
+close(BAR);
 
 end
