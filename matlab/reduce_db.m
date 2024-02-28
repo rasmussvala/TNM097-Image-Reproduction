@@ -1,4 +1,4 @@
-function [] = reduce_db(read_folder, write_folder, similarity_threshold)
+function [] = reduce_db(read_folder, write_folder, num_reduced_images)
 
 % array of all filepaths
 filepaths = dir(fullfile(read_folder, '*.jpg'));
@@ -38,14 +38,15 @@ for i=1:num_files
     end
 end
 
-% filter images with threshold 
+% filter images with threshold
+similarity_threshold = 5;
 similar_images = cell(1, num_files);
 for i = 1:num_files
     similar_images{i} = find(delta_e(i, :) < similarity_threshold);
 end
 
-% keep only one representative image from each group of similar images
-unique_images_idx = unique(cellfun(@(x) min(x), similar_images));
+% sorted indexes from most unique image to most common image
+[~, sorted_idx] = sort(cellfun('length', similar_images));
 
 % ceate a new folder for the reduced database
 newFolderPath = fullfile(write_folder);
@@ -54,9 +55,7 @@ if ~exist(newFolderPath, 'dir')
 end
 
 % save the reduced database to the new folder
-for i = 1:numel(unique_images_idx)
-    [~, filename, ext] = fileparts(filepaths(unique_images_idx(i)).name);
-    imwrite(images{unique_images_idx(i)}, fullfile(newFolderPath, [filename, ext]));
-end
-
+for i = 1:num_reduced_images
+    [~, filename, ext] = fileparts(filepaths(sorted_idx(i)).name);
+    imwrite(images{sorted_idx(i)}, fullfile(newFolderPath, [filename, ext]))
 end
