@@ -25,6 +25,7 @@ closest_colors = resized_db(closest_colors_idx);
 
 % Generate the output image by finding the smallest color differance
 output_image = generate_output_image(img, blocksize, closest_colors, db_avg_lab, closest_colors_idx, resized_db, BAR);
+
 close(BAR);
 
 end
