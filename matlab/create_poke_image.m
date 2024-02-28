@@ -15,16 +15,14 @@ file_paths = dir(fullfile(db_path, '*.jpg'));
 num_clusters = 50;
 color_clusters = perform_color_clustering(img, num_clusters);
 
-
+% Covert to LAB
+db_avg_lab = rgb2lab(db_avg_colors);
+clusters_lab = rgb2lab(color_clusters);
 
 % --------------------------------------------------------
 
 
-% Converts to LAB (Device independent format)
-dataBase_avgColors_LAB = rgb2lab(db_avg_colors);
 
-% Converts to LAB (Device independent format)
-inputImage_commonColors_LAB = rgb2lab(color_clusters);
 
 % Initialize the OUTPUTIMAGE
 inputImageSize = size(img);
@@ -37,7 +35,7 @@ selectedImagesIndices = zeros(num_clusters, 1);
 % Iterate through each color in "inputImage_commonColors"
 for colorIndex = 1:num_clusters
     % Extract LAB values of the current color from INPUTIMAGE_COMMONCOLORS
-    inputColorLab = inputImage_commonColors_LAB(colorIndex, :);
+    inputColorLab = clusters_lab(colorIndex, :);
 
     % Initialize variables to store closest image information for the current color
     closestImageIdx = 0;
@@ -46,7 +44,7 @@ for colorIndex = 1:num_clusters
     % Iterate through each image in the DATABASE
     for i = 1:numel(file_paths)
         % Extract LAB values of the current image from DATABASE
-        databasePixelLab = dataBase_avgColors_LAB(i, :);
+        databasePixelLab = db_avg_lab(i, :);
 
         % Calculate meanDeltaE between the input color and the current image
         [meanDeltaE, ~] = meanAndMaxDeltaE(inputColorLab, databasePixelLab);
@@ -81,7 +79,7 @@ for row = 1:blocksize:outputImageSize(1)
         % Iterate through each image in the DATABASE
         for i = 1:numel(selectedImages)
             % Extract LAB values of the current image from DATABASE
-            databasePixelLab = dataBase_avgColors_LAB(selectedImagesIndices(i), :);
+            databasePixelLab = db_avg_lab(selectedImagesIndices(i), :);
 
             % Calculate meanDeltaE between the input block and the current image
             [meanDeltaE, ~] = meanAndMaxDeltaE(inputBlockLab, databasePixelLab);
@@ -135,9 +133,8 @@ end
 
 % -----------------------------------------
 
-function img_clusters = perform_color_clustering(img, num_clusters)
+function color_clusters = perform_color_clustering(img, num_clusters)
 opts = statset('MaxIter', 1000);
 inputImageMatrix = im2double(reshape(img, [], 3));
-[~, inputImage_commonColors] = kmeans(inputImageMatrix, num_clusters, 'Options', opts);
-img_clusters = inputImage_commonColors;
+[~, color_clusters] = kmeans(inputImageMatrix, num_clusters, 'Options', opts);
 end
