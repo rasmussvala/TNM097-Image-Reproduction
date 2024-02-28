@@ -5,7 +5,7 @@ function outputImage = changeBackground(pokemonImage, image)
 gray_pokemon = rgb2gray(pokemonImage);
 gray_image = rgb2gray(image);
 
-lightness = mean(gray_image, 'all')
+% lightness = mean(gray_image, 'all')
 
 threshold_value = 247;
 binary_mask = gray_pokemon < threshold_value;

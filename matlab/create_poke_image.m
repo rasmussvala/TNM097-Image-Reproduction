@@ -5,7 +5,10 @@ BAR = waitbar(0,'Starting image reproduction...', 'Name', 'Image Reproduction');
 % Image which will be reproduced
 inputImage = imread(imagePath);
 
-% Check if the input image is too small or too large and resize 
+% input_LAB = rgb2lab(inputImage);
+% input_L = mean(mean(input_LAB(:,:,1)));
+
+% Check if the input image is too small or too large and resize
 if size(inputImage, 1) < 50 || size(inputImage, 2) < 50
     warning('Input image is too small. Resizing to a larger size.');
     inputImage = imresize(inputImage, 1.5); % Makes the image 1.5 times larger
@@ -24,13 +27,26 @@ resized_images = cell(1, numel(fileList));
 blocksize = 32;
 
 % Matrix to store average colors of pokemons (R, G, B)
-dataBase_avgColors = zeros(numel(fileList), 3);  
+dataBase_avgColors = zeros(numel(fileList), 3);
 
-% Loop through database, resize and calculate avg color 
+% Loop through database, resize and calculate avg color
 for i = 1:numel(fileList)
     filename = fullfile(folder, fileList(i).name);
-    images{i} = im2double(imread(filename));
+    images{i} = imread(filename);
     resized_images{i} = imresize(images{i}, [blocksize, blocksize]);
+
+
+    % poke_LAB = rgb2lab(resized_images{i});
+    %
+    % poke_L = mean(mean(poke_LAB(:, :, 1)));
+    %
+    % k = input_L / poke_L;
+    %
+    % poke_LAB(:, :, 1) = poke_LAB(:, :, 1) .* k;
+    %
+    % resized_images{i} = lab2rgb(poke_LAB);
+
+
 
     % Calculate average color for each channel (R, G, B)
     dataBase_avgColors(i, 1) = mean(mean(resized_images{i}(:,:,1)));  % Red channel
@@ -40,7 +56,7 @@ end
 
 % Convert the input image to a list of RGB values
 inputImageSize = size(inputImage);
-inputImageMatrix = im2double(reshape(inputImage, [], 3)); % Rearrange the image to a list of RGB values 
+inputImageMatrix = im2double(reshape(inputImage, [], 3)); % Rearrange the image to a list of RGB values
 
 % Perform k-means clustering to find the most common colors with increased iterations
 num_colors = 10;
