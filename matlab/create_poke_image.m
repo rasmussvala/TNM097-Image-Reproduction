@@ -2,16 +2,16 @@ function outputImage = create_poke_image(img_path, db_path)
 
 BAR = waitbar(0,'Starting image reproduction...', 'Name', 'Image Reproduction');
 
-% Read img and resize to proper size
+% Read img and resize if to small or big
 img = imread(img_path);
 img = resize_input_image(img);
 
-% Load and preprocess database images
+% Load and resize database images to a smallar and more approachable size
 blocksize = 32;
 file_paths = dir(fullfile(db_path, '*.jpg'));
 [resized_db, db_avg_colors] = load_db(db_path, blocksize, file_paths);
 
-% Perform color clustering on input image
+% Perform color clustering on input image to find the most common colors
 num_clusters = 50;
 color_clusters = perform_color_clustering(img, num_clusters);
 
@@ -19,52 +19,16 @@ color_clusters = perform_color_clustering(img, num_clusters);
 db_avg_lab = rgb2lab(db_avg_colors);
 clusters_lab = rgb2lab(color_clusters);
 
+% Find the closest colors and create an new array with them 
+closest_colors_idx = find_closest_colors_idx(clusters_lab, db_avg_lab);
+closest_colors = resized_db(closest_colors_idx);
+
 % --------------------------------------------------------
-
-
-
 
 % Initialize the OUTPUTIMAGE
 inputImageSize = size(img);
 outputImageSize = inputImageSize * blocksize;
 outputImage = zeros(outputImageSize(1), outputImageSize(2), 3);
-
-% Initialize a matrix to store the indices of selected images for each color
-selectedImagesIndices = zeros(num_clusters, 1);
-
-% Iterate through each color in "inputImage_commonColors"
-for colorIndex = 1:num_clusters
-    % Extract LAB values of the current color from INPUTIMAGE_COMMONCOLORS
-    inputColorLab = clusters_lab(colorIndex, :);
-
-    % Initialize variables to store closest image information for the current color
-    closestImageIdx = 0;
-    minMeanDeltaE = inf;
-
-    % Iterate through each image in the DATABASE
-    for i = 1:numel(file_paths)
-        % Extract LAB values of the current image from DATABASE
-        databasePixelLab = db_avg_lab(i, :);
-
-        % Calculate meanDeltaE between the input color and the current image
-        [meanDeltaE, ~] = meanAndMaxDeltaE(inputColorLab, databasePixelLab);
-
-        % Update closest image information if the current image is closer
-        if meanDeltaE < minMeanDeltaE
-            minMeanDeltaE = meanDeltaE;
-            closestImageIdx = i;
-        end
-    end
-
-    % Store the index of the closest image for the current color
-    selectedImagesIndices(colorIndex) = closestImageIdx;
-end
-
-% Check for duplicates in selected images and remove them
-selectedImagesIndices = unique(selectedImagesIndices);
-
-% Create a new matrix containing 50 unique images of Pokemon based on the selected indices
-selectedImages = resized_db(selectedImagesIndices);
 
 % Iterate through each block in the OUTPUTIMAGE
 for row = 1:blocksize:outputImageSize(1)
@@ -77,9 +41,9 @@ for row = 1:blocksize:outputImageSize(1)
         minMeanDeltaE = inf;
 
         % Iterate through each image in the DATABASE
-        for i = 1:numel(selectedImages)
+        for i = 1:numel(closest_colors)
             % Extract LAB values of the current image from DATABASE
-            databasePixelLab = db_avg_lab(selectedImagesIndices(i), :);
+            databasePixelLab = db_avg_lab(closest_colors_idx(i), :);
 
             % Calculate meanDeltaE between the input block and the current image
             [meanDeltaE, ~] = meanAndMaxDeltaE(inputBlockLab, databasePixelLab);
@@ -87,7 +51,7 @@ for row = 1:blocksize:outputImageSize(1)
             % Update closest image information if the current image is closer
             if meanDeltaE < minMeanDeltaE
                 minMeanDeltaE = meanDeltaE;
-                closestImageIdx = selectedImagesIndices(i);
+                closestImageIdx = closest_colors_idx(i);
             end
         end
 
@@ -97,6 +61,7 @@ for row = 1:blocksize:outputImageSize(1)
         waitbar(row / outputImageSize(1), BAR, sprintf('Reproduction: %.1f%%', row / outputImageSize(1) * 100));
     end
 end
+
 close(BAR);
 
 end
@@ -137,4 +102,31 @@ function color_clusters = perform_color_clustering(img, num_clusters)
 opts = statset('MaxIter', 1000);
 inputImageMatrix = im2double(reshape(img, [], 3));
 [~, color_clusters] = kmeans(inputImageMatrix, num_clusters, 'Options', opts);
+end
+
+% -----------------------------------------
+
+function closest_colors_idx = find_closest_colors_idx(clusters, db_avg)
+num_clusters = size(clusters, 1);
+closest_colors_idx = zeros(num_clusters, 1);
+
+for cluster_idx = 1:num_clusters
+    color = clusters(cluster_idx, :);
+    num_db = size(db_avg, 1);
+    minMeanDeltaE = inf;
+
+    for db_idx = 1:num_db
+        db_color = db_avg(db_idx, :);
+        [meanDeltaE, ~] = meanAndMaxDeltaE(color, db_color);
+
+        if meanDeltaE < minMeanDeltaE
+            minMeanDeltaE = meanDeltaE;
+            closest_idx = db_idx;
+        end
+    end
+    closest_colors_idx(cluster_idx) = closest_idx;
+end
+
+% Remove duplicates
+closest_colors_idx = unique(closest_colors_idx);
 end
