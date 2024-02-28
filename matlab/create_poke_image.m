@@ -1,4 +1,4 @@
-function outputImage = create_poke_image(img_path, db_path)
+function output_image = create_poke_image(img_path, db_path)
 
 BAR = waitbar(0,'Starting image reproduction...', 'Name', 'Image Reproduction');
 
@@ -19,49 +19,12 @@ color_clusters = perform_color_clustering(img, num_clusters);
 db_avg_lab = rgb2lab(db_avg_colors);
 clusters_lab = rgb2lab(color_clusters);
 
-% Find the closest colors and create an new array with them 
+% Find the closest colors and create an new array with them
 closest_colors_idx = find_closest_colors_idx(clusters_lab, db_avg_lab);
 closest_colors = resized_db(closest_colors_idx);
 
-% --------------------------------------------------------
-
-% Initialize the OUTPUTIMAGE
-inputImageSize = size(img);
-outputImageSize = inputImageSize * blocksize;
-outputImage = zeros(outputImageSize(1), outputImageSize(2), 3);
-
-% Iterate through each block in the OUTPUTIMAGE
-for row = 1:blocksize:outputImageSize(1)
-    for col = 1:blocksize:outputImageSize(2)
-        % Extract LAB values of the current block from INPUTIMAGE
-        inputBlockLab = rgb2lab(reshape(img(ceil(row/blocksize), ceil(col/blocksize), :), 1, 1, 3));
-
-        % Initialize variables to store closest image information
-        closestImageIdx = 0;
-        minMeanDeltaE = inf;
-
-        % Iterate through each image in the DATABASE
-        for i = 1:numel(closest_colors)
-            % Extract LAB values of the current image from DATABASE
-            databasePixelLab = db_avg_lab(closest_colors_idx(i), :);
-
-            % Calculate meanDeltaE between the input block and the current image
-            [meanDeltaE, ~] = meanAndMaxDeltaE(inputBlockLab, databasePixelLab);
-
-            % Update closest image information if the current image is closer
-            if meanDeltaE < minMeanDeltaE
-                minMeanDeltaE = meanDeltaE;
-                closestImageIdx = closest_colors_idx(i);
-            end
-        end
-
-        % Replace the block in OUTPUTIMAGE with the corresponding block from the closest image
-        outputImage(row:(row+blocksize-1), col:(col+blocksize-1), :) = resized_db{closestImageIdx};
-
-        waitbar(row / outputImageSize(1), BAR, sprintf('Reproduction: %.1f%%', row / outputImageSize(1) * 100));
-    end
-end
-
+% Generate the output image by finding the smallest color differance
+output_image = generate_output_image(img, blocksize, closest_colors, db_avg_lab, closest_colors_idx, resized_db, BAR);
 close(BAR);
 
 end
@@ -129,4 +92,42 @@ end
 
 % Remove duplicates
 closest_colors_idx = unique(closest_colors_idx);
+end
+
+% -----------------------------------------
+
+function output_img = generate_output_image(img, blocksize, closest_colors, db_avg_lab, closest_colors_idx, resized_db, BAR)
+out_img_size = size(img) * blocksize;
+rows = out_img_size(1);
+cols = out_img_size(2);
+output_img = zeros(rows, cols, 3);
+
+for row = 1:blocksize:rows
+    for col = 1:blocksize:cols
+        % Extracting pixel at specific row and column
+        block_row = ceil(row / blocksize);
+        block_col = ceil(col / blocksize);
+        pixel_rgb = img(block_row, block_col, :);
+
+        % Convert RGB pixel to LAB color space
+        img_pixel_lab = rgb2lab(reshape(pixel_rgb, 1, 1, 3));
+
+        min_mean_delta_e = inf;
+
+        % Find the smallest delta between input image and db colors
+        for i = 1:numel(closest_colors)
+            db_pixel_lab = db_avg_lab(closest_colors_idx(i), :);
+            [mean_delta_e, ~] = meanAndMaxDeltaE(img_pixel_lab, db_pixel_lab);
+
+            if mean_delta_e < min_mean_delta_e
+                min_mean_delta_e = mean_delta_e;
+                closest_image_idx = closest_colors_idx(i);
+            end
+        end
+
+        output_img(row:(row+blocksize-1), col:(col+blocksize-1), :) = resized_db{closest_image_idx};
+
+        waitbar(row / rows, BAR, sprintf('Reproduction: %.1f%%', row / rows * 100));
+    end
+end
 end
