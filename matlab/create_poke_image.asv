@@ -144,13 +144,8 @@ for row = 1:blocksize:rows
         end
 
         final = resized_db{closest_image_idx};
+        final_lab = 
 
-        if(adjust_l)
-            final_lab = rgb2lab(final);
-            final_lab(:,:,1) = img_l;
-            final = lab2rgb(final_lab);
-        end
-        
         output_img(row:(row+blocksize-1), col:(col+blocksize-1), :) = final;
 
         waitbar(row / rows, BAR, sprintf('Reproduction: %.1f%%', row / rows * 100));
