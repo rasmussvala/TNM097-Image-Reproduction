@@ -3,11 +3,11 @@ function output_image = create_poke_image(img_path, db_path, adjust_l)
 BAR = waitbar(0,'Starting image reproduction...', 'Name', 'Image Reproduction');
 
 % Read img and resize if to small or big
+blocksize = 32;
 img = imread(img_path);
-img = resize_input_image(img);
+img = resize_input_image(img, blocksize);
 
 % Load and resize database images to a smallar and more approachable size
-blocksize = 32;
 file_paths = dir(fullfile(db_path, '*.jpg'));
 [resized_db, db_avg_colors] = load_db(db_path, blocksize, file_paths);
 
@@ -39,15 +39,28 @@ end
 
 % --------------- Functions ---------------
 
-function img = resize_input_image(img)
-if size(img, 1) < 50 || size(img, 2) < 50
-    warning(['Input image is too small (under 50 pixels in ' ...
-        'height or width). Resizing to 150%.']);
-    img = imresize(img, 1.5);
-elseif size(img, 1) > 500 || size(img, 2) > 500
-    warning(['Input image is too large (over 500 pixels in ' ...
-        'height or width). Resizing to 50%.']);
-    img = imresize(img, 0.5);
+function img = resize_input_image(img, blocksize)
+[row, col, ~] = size(img);
+min_size = blocksize;
+max_size = 400;
+
+if row < min_size || col < min_size || row > max_size || col > max_size
+    warning(['Image dimensions are out of range (32-400 pixels in ' ...
+        'height or width). Resizing...']);
+
+    % Calculate scaling factor to fit within the desired range
+    target_col = min(max(col, min_size), max_size);
+    target_row = min(max(row, min_size), max_size);
+
+    % The image is too large
+    if target_col == max_size || target_row == max_size
+        scaling_factor = min(target_col/col, target_row/row);
+        % The image is too small
+    elseif target_col == min_size || target_row == min_size
+        scaling_factor = max(target_col/col, target_row/row);
+    end
+
+    img = imresize(img, scaling_factor);
 end
 end
 
@@ -150,7 +163,7 @@ for row = 1:blocksize:rows
             final_lab(:,:,1) = img_l;
             final = lab2rgb(final_lab);
         end
-        
+
         output_img(row:(row+blocksize-1), col:(col+blocksize-1), :) = final;
 
         waitbar(row / rows, BAR, sprintf('Reproduction: %.1f%%', row / rows * 100));
