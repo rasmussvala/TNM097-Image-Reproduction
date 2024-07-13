@@ -1,4 +1,4 @@
-function output_image = create_poke_image(img_path, db_path, adjust_l)
+function create_poke_image(img_path, db_path)
 
 BAR = waitbar(0,'Starting image reproduction...', 'Name', 'Image Reproduction');
 
@@ -15,7 +15,7 @@ file_paths = dir(fullfile(db_path, '*.jpg'));
 num_clusters = 50;
 color_clusters = perform_color_clustering(img, num_clusters);
 
-% Covert to LAB
+% Convert to LAB
 db_avg_lab = rgb2lab(db_avg_colors);
 clusters_lab = rgb2lab(color_clusters);
 
@@ -30,8 +30,13 @@ output_image = generate_output_image(img, ...
     db_avg_lab, ...
     closest_colors_idx, ...
     resized_db, ...
-    adjust_l, ...
     BAR);
+
+% Update waitbar text to "Saving the image..."
+waitbar(1, BAR, 'Saving the image...');
+
+% Save the output image
+imwrite(output_image, "output.png");
 
 close(BAR);
 
@@ -42,12 +47,14 @@ end
 function img = resize_input_image(img, blocksize)
 [row, col, ~] = size(img);
 min_size = blocksize;
-max_size = 400;
+max_size = 200;
+
+% Image dimensions should be in the range blocksize (32) - maxsize (200) pixels in
+% height or width, if bigger or smaller, rezise to min or max size. This is
+% to optimize loading times. 
 
 if row < min_size || col < min_size || row > max_size || col > max_size
-    warning(['Image dimensions are out of range (32-400 pixels in ' ...
-        'height or width). Resizing...']);
-
+    
     % Calculate scaling factor to fit within the desired range
     target_col = min(max(col, min_size), max_size);
     target_row = min(max(row, min_size), max_size);
@@ -103,7 +110,7 @@ for cluster_idx = 1:num_clusters
 
     for db_idx = 1:num_db
         db_color = db_avg(db_idx, :);
-        [meanDeltaE, ~] = meanAndMaxDeltaE(color, db_color);
+        [meanDeltaE, ~] = mean_max_delta_e(color, db_color);
 
         if meanDeltaE < minMeanDeltaE
             minMeanDeltaE = meanDeltaE;
@@ -124,7 +131,7 @@ function output_img = generate_output_image(img, ...
     closest_colors, ...
     db_avg_lab, ...
     closest_colors_idx, ...
-    resized_db, adjust_l, ...
+    resized_db, ...
     BAR)
 
 out_img_size = size(img) * blocksize;
@@ -141,14 +148,13 @@ for row = 1:blocksize:rows
 
         % Convert RGB pixel to LAB color space
         img_pixel_lab = rgb2lab(reshape(pixel_rgb, 1, 1, 3));
-        img_l = img_pixel_lab(:,:,1);
 
         min_mean_delta_e = inf;
 
         % Find the smallest delta between input image and db colors
         for i = 1:numel(closest_colors)
             db_pixel_lab = db_avg_lab(closest_colors_idx(i), :);
-            [mean_delta_e, ~] = meanAndMaxDeltaE(img_pixel_lab, db_pixel_lab);
+            [mean_delta_e, ~] = mean_max_delta_e(img_pixel_lab, db_pixel_lab);
 
             if mean_delta_e < min_mean_delta_e
                 min_mean_delta_e = mean_delta_e;
@@ -157,12 +163,6 @@ for row = 1:blocksize:rows
         end
 
         final = resized_db{closest_image_idx};
-
-        if(adjust_l)
-            final_lab = rgb2lab(final);
-            final_lab(:,:,1) = img_l;
-            final = lab2rgb(final_lab);
-        end
 
         output_img(row:(row+blocksize-1), col:(col+blocksize-1), :) = final;
 
